@@ -1,0 +1,21 @@
+[PrefixDeclaration]
+:		http://www.semanticweb.org/charivie/ontologies/2023/4/untitled-ontology-35#
+owl:		http://www.w3.org/2002/07/owl#
+rdf:		http://www.w3.org/1999/02/22-rdf-syntax-ns#
+xml:		http://www.w3.org/XML/1998/namespace
+xsd:		http://www.w3.org/2001/XMLSchema#
+clmo:		http://climate.aws.com/ontology/
+clmr:		http://climate.aws.com/resource#
+foaf:		http://xmlns.com/foaf/0.1/
+obda:		https://w3id.org/obda/vocabulary#
+rdfs:		http://www.w3.org/2000/01/rdf-schema#
+
+[MappingDeclaration] @collection [[
+mappingId	temp_readings
+target		clmr:{timestamp}{station} a clmo:TemperatureReading ; clmo:dateTime {date}^^xsd:dateTime ; clmo:fahrenheit {fahrenheit}^^xsd:float ; clmo:celsius {celsius}^^xsd:float ; clmo:station clmr:{station} . 
+source		select * from "AwsDataCatalog"."kgc-climate"."charivie_kgc"
+
+mappingId	MAPID-53bf51d359964dd1cl955d0942e909de01
+target		clmr:{station} a clmo:WeatherStation ; clmo:name {name}^^xsd:string . 
+source		select station, name from "AwsDataCatalog"."kgc-climate"."charivie_kgc"
+]]

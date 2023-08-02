@@ -1,0 +1,421 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Companion infrastructure for the Ontop blog
+Parameters:
+  Env:
+    Description: "Environment tag, e.g. prod, nonprod."
+    Default: test
+    Type: String
+    AllowedPattern: "[a-z0-9]+"
+    MaxLength: 15
+  NeptuneDbInstanceType:
+    Description: Neptune DB instance type
+    Type: String
+    Default: db.r5.xlarge
+    AllowedValues:
+      - db.t3.medium
+      - db.r4.large
+      - db.r4.xlarge
+      - db.r4.2xlarge
+      - db.r4.4xlarge
+      - db.r4.8xlarge
+      - db.r5.large
+      - db.r5.xlarge
+      - db.r5.2xlarge
+      - db.r5.4xlarge
+      - db.r5.8xlarge
+      - db.r5.12xlarge
+  IamAuthEnabled:
+    Type: String
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Enable IAM Auth for Neptune.
+  NotebookInstanceType:
+    Description: >-
+      SageMaker Notebook instance type. Please refer
+      https://aws.amazon.com/sagemaker/pricing/ for uptodate allowed instance
+      type in aws region and https://aws.amazon.com/neptune/pricing/ for
+      pricing.
+    Type: String
+    Default: ml.t3.medium
+    AllowedValues:
+      - ml.t2.medium
+      - ml.t2.large
+      - ml.t2.xlarge
+      - ml.t2.2xlarge
+      - ml.t3.medium
+      - ml.m4.xlarge
+      - ml.m4.2xlarge
+      - ml.m4.4xlarge
+      - ml.m4.10xlarge
+      - ml.m4.16xlarge
+      - ml.m5.large
+      - ml.m5.xlarge
+      - ml.m5.2xlarge
+      - ml.m5.4xlarge
+      - ml.m5.12xlarge
+      - ml.m5.24xlarge
+      - ml.m5d.large
+      - ml.m5d.xlarge
+      - ml.m5d.2xlarge
+      - ml.m5d.4xlarge
+      - ml.m5d.12xlarge
+      - ml.m5d.24xlarge
+      - ml.c4.large
+      - ml.c4.xlarge
+      - ml.c4.2xlarge
+      - ml.c4.4xlarge
+      - ml.c4.8xlarge
+    ConstraintDescription: Must be a valid SageMaker instance type.
+  SourceS3BucketName:
+    Description: "Where the data is."
+    Default: aws-neptune-customer-samples
+    Type: String 
+  SourceS3BucketFolderNoSlash:
+    Description: "Where the data is."
+    Default: neptune-virtualization/blog
+    Type: String 
+
+Resources:
+
+  # S3 bucket; mainly just for data
+  S3DataBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete 
+    Properties:
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'AES256' 
+
+  # Custom resource lambda that sets key env vars for use in notebook: 
+  # PUB_BUCKET, DATA_BUCKET, ROOT_DIR_NOSLASH
+  # And it copies the notebook from Git to the notebook instance
+  SetupFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt 'LambdaExecutionRole.Arn'
+      FunctionName: !Join ['-', [!Ref 'AWS::StackName','copy' ]]
+      MemorySize: 2048
+      Runtime: python3.7
+      Timeout: 300
+      Handler: index.handler
+      Code:
+        ZipFile: 
+          Fn::Sub:
+          - |-
+           import json
+           import boto3
+           import urllib3
+           import os
+           import logging
+           import cfnresponse
+
+           LOGGER = logging.getLogger()
+           LOGGER.setLevel(logging.INFO)
+
+           PUB_BUCKET = '${SourceS3BucketName}'
+           ROOT_DIR_NOSLASH= '${SourceS3BucketFolderNoSlash}'
+           DATA_BUCKET='${S3DataBucket}'
+
+           def handler(event, context):
+              response_data['Data'] = 'git success'
+              response_data['NotebookAddScript'] =  f'echo "export PUB_BUCKET={PUB_BUCKET}" >> ~/.bashrc\n'
+              response_data['NotebookAddScript'] =  f'echo "export DATA_BUCKET={DATA_BUCKET}" >> ~/.bashrc\n'
+              response_data['NotebookAddScript'] =  f'echo "export ROOT_DIR_NOSLASH={ROOT_DIR_NOSLASH}" >> ~/.bashrc\n'
+              response_data['NotebookAddScript'] +=  f"if [ ! -f /home/ec2-user/SageMaker/climate-data-queries.ipynb  ]\n"
+              response_data['NotebookAddScript'] += f"then\n"
+              response_data['NotebookAddScript'] += f"  wget https://raw.githubusercontent.com/aws-samples/neptune-graph-virtualization/notebook/climate-data-queries.ipynb /home/ec2-user/SageMaker/climate-data-queries.ipynb\n"
+              response_data['NotebookAddScript'] += f"fi\n"
+              response_data['Data'] = 'git success'
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+                
+               return {
+                   'statusCode': 200,
+                   'body': json.dumps('Copied Files')
+               }
+
+          - {
+            SourceS3BucketName: !Ref SourceS3BucketName,
+            SourceS3BucketFolderNoSlash: !Ref SourceS3BucketFolderNoSlash,
+            S3DataBucket : !Ref S3DataBucket,
+            Role : !GetAtt LambdaExecutionRole.Arn
+            } 
+  
+  # Role for the custom resource lambda
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSLambdaExecute
+  
+  # Custom resource to help setup
+  EnvSetup:
+    Type: 'Custom::EnvSetup'
+    DependsOn:
+      - LambdaExecutionRole
+      - S3WorkingBucket
+    Properties:
+      ServiceToken: !GetAtt SetupFunction.Arn
+      data_bucket: !Ref S3DataBucket
+      pub_bucket: !Ref SourceS3BucketName
+      pub_bucket_path: !Ref SourceS3BucketFolderNoSlash
+
+  # Neptune base stack. Also creates VPC, S3 VPC endpoint, bulk load role
+  NeptuneStack:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL: "https://s3.amazonaws.com/aws-neptune-customer-samples/v2/cloudformation-templates/neptune-base-stack.json"
+      TimeoutInMinutes: "60"
+      Parameters:
+        DbInstanceType: !Ref NeptuneDbInstanceType
+        Env: !Ref Env
+        IamAuthEnabled: !Ref IamAuthEnabled
+        StorageEncypted: true
+        NeptuneEnableAuditLog: 1
+
+  # Define as ECS console does except add 8080
+  ECSSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Lake traffic"
+      VpcId: !Ref NeptuneStack.Outputs.VPC
+      SecurityGroupEgress:
+      - IpProtocol: "-1"
+        CidrIp: "0.0.0.0/0"
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 8080
+        ToPort: 8080
+        CidrIp: 0.0.0.0/0
+
+  # We need an ECS cluster. We will create a task too, but that's post-setup
+  # The reader will do that on their own from the notebook
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref Env
+
+  # ECR repo. Reader will push image post-setup once they've built it
+  ECRLakeRepository: 
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: "ontop-lake"
+
+  # The role for the ECS task, once it's ready
+  ECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: ontop-lake-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - athena:getQueryExecution
+                  - athena:BatchGetQueryExecution
+                  - athena:GetQueryExecution
+                  - athena:GetQueryResults
+                  - athena:GetQueryResultsStream
+                  - athena:ListQueryExecutions
+                  - athena:StartQueryExecution
+                  - athena:StopQueryExecution
+                  - athena:ListWorkGroups
+                  - athena:ListEngineVersions
+                  - athena:GetWorkGroup
+                  - athena:GetDataCatalog
+                  - athena:GetDatabase
+                  - athena:GetTableMetadata
+                  - athena:ListDataCatalogs
+                  - athena:ListDatabases
+                  - athena:ListTableMetadata
+                Resource: "*"
+              - Effect: Allow
+                Action: "glue:*" 
+                Resource: 
+                  - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog'
+                  - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/ontop_demo_lake'
+                  - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/ontop_demo_lake/*'
+              - Effect: Allow
+                Action:
+                  - s3:GetBucketLocation
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:ListBucketMultipartUploads
+                  - s3:AbortMultipartUpload
+                  - s3:PutObject
+                  - s3:ListMultipartUploadParts
+                Resource:
+                  - !Sub 'arn:aws:s3:::${S3DataBucket}'
+                  - !Sub 'arn:aws:s3:::${S3DataBucket}/*'
+                  - !Sub 'arn:aws:s3:::${S3DataBucket}/athena_output/*'
+
+  # Glue catalog DB
+  DemoVirtualizationDatabase:
+    Type: "AWS::Glue::Database"
+    Properties:
+      DatabaseInput:
+        Name: ontop_demo_lake
+        LocationUri: !Ref S3DataBucket
+        Description: "Demo virtualization lake"
+      CatalogId: !Ref AWS::AccountId
+
+  # The climate table. 
+  # The data itself will need to be moved to the reader's S3DataBucket.
+  # That copy is manual and done post-setup.
+  ClimateReadingsTable:
+    Type: "AWS::Glue::Table"
+    DependsOn: DemoVirtualizationDatabase
+    Properties:
+      DatabaseName: ontop_demo_lake
+      CatalogId: !Ref AWS::AccountId
+      TableInput:
+        Name: climate_readings
+        Description: "Demo virtualization table - climate readings"
+        TableType: "EXTERNAL_TABLE"
+        PartitionKeys: 
+          - Name: partition_0
+            Type: string
+        Parameters: {
+          "sizeKey": "13687923629",
+          "objectCount": "231407",
+          "recordCount": "615423281",
+          "averageRecordSize": "91",
+          "compressionType": "none",
+          "classification": "parquet",
+          "typeOfData": "file"
+        }
+        StorageDescriptor:
+          Columns: 
+            - Name: station
+              Type: bigint
+            - Name: date
+              Type: string
+            - Name: latitude
+              Type: double
+            - Name: longitude
+              Type: double
+            - Name: name
+              Type: string
+            - Name: tmp
+              Type: string
+            - Name: fahrenheit
+              Type: double
+            - Name: celsius
+              Type: double
+            - Name: timestamp
+              Type: bigint
+            - Name: index
+              Type: bigint
+          Location": !Sub "s3://${S3DataBucket}/lake/climate/"
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Compressed: false
+          NumberOfBuckets: -1
+          SerdeInfo: 
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+            Parameters: 
+              serialization.format: 1
+          Parameters": {
+            "sizeKey": "13687923629",
+            "objectCount": "231407",
+            "recordCount": "615423281",
+            "averageRecordSize": "91",
+            "compressionType": "none",
+            "classification": "parquet",
+            "typeOfData": "file"
+          }
+          StoredAsSubDirectories: false
+
+Outputs:
+  DBClusterEndpoint:
+    Value: !GetAtt
+      - NeptuneStack
+      - Outputs.DBClusterEndpoint
+  DBClusterId:
+    Value: !GetAtt
+      - NeptuneStack
+      - Outputs.DBClusterId
+  DBClusterPort:
+    Value: !GetAtt
+      - NeptuneStack
+      - Outputs.DBClusterPort
+  DBClusterResourceId:
+    Value: !GetAtt
+      - NeptuneStack
+      - Outputs.DBClusterResourceId
+  NeptuneLoadFromS3IAMRoleArn:
+    Value: !GetAtt
+      - NeptuneStack
+      - Outputs.NeptuneLoadFromS3IAMRoleArn
+  NeptuneSagemakerNotebook:
+    Value: !GetAtt
+      - NeptuneStack
+      - Outputs.NeptuneSagemakerNotebook
+  PrivateSubnet1:
+    Value: !GetAtt
+      - NeptuneStack
+      - Outputs.PrivateSubnet1
+  PrivateSubnet2:
+    Value: !GetAtt
+      - NeptuneStack
+      - Outputs.PrivateSubnet2
+  PrivateSubnet3:
+    Value: !GetAtt
+      - NeptuneStack
+      - Outputs.PrivateSubnet3
+  PublicSubnet1:
+    Value: !GetAtt
+      - NeptuneStack
+      - Outputs.PublicSubnet1
+  PublicSubnet2:
+    Value: !GetAtt
+      - NeptuneStack
+      - Outputs.PublicSubnet2
+  PublicSubnet3:
+    Value: !GetAtt
+      - NeptuneStack
+      - Outputs.PublicSubnet3
+  VPC:
+    Value: !GetAtt
+      - NeptuneStack
+      - Outputs.VPC
+
+  NeptuneSagemakerNotebook:
+    Value: !GetAtt
+      - NeptuneStack
+      - Outputs.NeptuneSagemakerNotebook
+  S3DataBucket:
+    Value: !Ref S3DataBucket
+  ECSCluster: 
+    Value: !Ref ECSCluster
+  LakeRepository:
+    Value: !GetAtt ECSStack.Outputs.LakeRepository
+  LakeSecurityGroup:
+    Value: !GetAtt ECSStack.Outputs.LakeSecurityGroup
+  LakeTaskRole:
+    Value: !GetAtt ECSStack.Outputs.LakeTaskRole
+
+
