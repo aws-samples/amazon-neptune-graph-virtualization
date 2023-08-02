@@ -120,21 +120,22 @@ Resources:
            DATA_BUCKET='${S3DataBucket}'
 
            def handler(event, context):
+              response_data = {}
               response_data['Data'] = 'git success'
               response_data['NotebookAddScript'] =  f'echo "export PUB_BUCKET={PUB_BUCKET}" >> ~/.bashrc\n'
-              response_data['NotebookAddScript'] =  f'echo "export DATA_BUCKET={DATA_BUCKET}" >> ~/.bashrc\n'
-              response_data['NotebookAddScript'] =  f'echo "export ROOT_DIR_NOSLASH={ROOT_DIR_NOSLASH}" >> ~/.bashrc\n'
+              response_data['NotebookAddScript'] +=  f'echo "export DATA_BUCKET={DATA_BUCKET}" >> ~/.bashrc\n'
+              response_data['NotebookAddScript'] +=  f'echo "export ROOT_DIR_NOSLASH={ROOT_DIR_NOSLASH}" >> ~/.bashrc\n'
               response_data['NotebookAddScript'] +=  f"if [ ! -f /home/ec2-user/SageMaker/climate-data-queries.ipynb  ]\n"
               response_data['NotebookAddScript'] += f"then\n"
-              response_data['NotebookAddScript'] += f"  wget https://raw.githubusercontent.com/aws-samples/neptune-graph-virtualization/notebook/climate-data-queries.ipynb /home/ec2-user/SageMaker/climate-data-queries.ipynb\n"
+              response_data['NotebookAddScript'] += f"  wget https://raw.githubusercontent.com/aws-samples/amazon-neptune-graph-virtualization/notebook/climate-data-queries.ipynb /home/ec2-user/SageMaker/climate-data-queries.ipynb\n"
               response_data['NotebookAddScript'] += f"fi\n"
               response_data['Data'] = 'git success'
               cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
                 
-               return {
+              return {
                    'statusCode': 200,
                    'body': json.dumps('Copied Files')
-               }
+              }
 
           - {
             SourceS3BucketName: !Ref SourceS3BucketName,
@@ -165,7 +166,7 @@ Resources:
     Type: 'Custom::EnvSetup'
     DependsOn:
       - LambdaExecutionRole
-      - S3WorkingBucket
+      - S3DataBucket
     Properties:
       ServiceToken: !GetAtt SetupFunction.Arn
       data_bucket: !Ref S3DataBucket
@@ -176,21 +177,26 @@ Resources:
   NeptuneStack:
     Type: "AWS::CloudFormation::Stack"
     Properties:
-      TemplateURL: "https://s3.amazonaws.com/aws-neptune-customer-samples/v2/cloudformation-templates/neptune-base-stack.json"
+      TemplateURL: "https://aws-neptune-customer-samples.s3.amazonaws.com/v2/cloudformation-templates/neptune-full-stack-nested-template.json"
       TimeoutInMinutes: "60"
       Parameters:
+        DBClusterId: !Join [ "-", ["gv", !Join [ "", !Split [ "-", !Select [ 2,  !Split [ "/", !Ref AWS::StackId ] ] ] ] ] ]
         DbInstanceType: !Ref NeptuneDbInstanceType
         Env: !Ref Env
         IamAuthEnabled: !Ref IamAuthEnabled
-        StorageEncypted: true
         NeptuneEnableAuditLog: 1
+        NotebookInstanceType: !Ref NotebookInstanceType
+        NeptuneSagemakerNotebookStartupScript:  !GetAtt EnvSetup.NotebookAddScript 
+        EC2ClientInstanceType: none
 
   # Define as ECS console does except add 8080
   ECSSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
       GroupDescription: "Lake traffic"
-      VpcId: !Ref NeptuneStack.Outputs.VPC
+      VpcId: !GetAtt 
+        - NeptuneStack
+        - Outputs.VPC
       SecurityGroupEgress:
       - IpProtocol: "-1"
         CidrIp: "0.0.0.0/0"
@@ -329,7 +335,7 @@ Resources:
               Type: bigint
             - Name: index
               Type: bigint
-          Location": !Sub "s3://${S3DataBucket}/lake/climate/"
+          Location: !Sub "s3://${S3DataBucket}/lake/climate/"
           InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
           OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
           Compressed: false
@@ -338,7 +344,7 @@ Resources:
             SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
             Parameters: 
               serialization.format: 1
-          Parameters": {
+          Parameters: {
             "sizeKey": "13687923629",
             "objectCount": "231407",
             "recordCount": "615423281",
@@ -350,6 +356,8 @@ Resources:
           StoredAsSubDirectories: false
 
 Outputs:
+
+
   DBClusterEndpoint:
     Value: !GetAtt
       - NeptuneStack
@@ -377,27 +385,19 @@ Outputs:
   PrivateSubnet1:
     Value: !GetAtt
       - NeptuneStack
-      - Outputs.PrivateSubnet1
+      - Outputs.Subnet1
   PrivateSubnet2:
     Value: !GetAtt
       - NeptuneStack
-      - Outputs.PrivateSubnet2
+      - Outputs.Subnet2
   PrivateSubnet3:
     Value: !GetAtt
       - NeptuneStack
-      - Outputs.PrivateSubnet3
+      - Outputs.Subnet3
   PublicSubnet1:
     Value: !GetAtt
       - NeptuneStack
-      - Outputs.PublicSubnet1
-  PublicSubnet2:
-    Value: !GetAtt
-      - NeptuneStack
-      - Outputs.PublicSubnet2
-  PublicSubnet3:
-    Value: !GetAtt
-      - NeptuneStack
-      - Outputs.PublicSubnet3
+      - Outputs.Subnet4
   VPC:
     Value: !GetAtt
       - NeptuneStack
@@ -409,13 +409,16 @@ Outputs:
       - Outputs.NeptuneSagemakerNotebook
   S3DataBucket:
     Value: !Ref S3DataBucket
-  ECSCluster: 
+  ECSSecurityGroup:
+    Value: !Ref ECSSecurityGroup
+  ECSCluster:
     Value: !Ref ECSCluster
-  LakeRepository:
-    Value: !GetAtt ECSStack.Outputs.LakeRepository
-  LakeSecurityGroup:
-    Value: !GetAtt ECSStack.Outputs.LakeSecurityGroup
-  LakeTaskRole:
-    Value: !GetAtt ECSStack.Outputs.LakeTaskRole
-
+  ECRLakeRepository: 
+    Value: !Ref ECRLakeRepository
+  ECSTaskRole:
+    Value: !Ref ECSTaskRole
+  DemoVirtualizationDatabase:
+    Value: !Ref DemoVirtualizationDatabase
+  ClimateReadingsTable:
+    Value: !Ref ClimateReadingsTable
 
