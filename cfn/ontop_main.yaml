@@ -127,7 +127,8 @@ Resources:
               response_data['NotebookAddScript'] +=  f'echo "export ROOT_DIR_NOSLASH={ROOT_DIR_NOSLASH}" >> ~/.bashrc\n'
               response_data['NotebookAddScript'] +=  f"if [ ! -f /home/ec2-user/SageMaker/climate-data-queries.ipynb  ]\n"
               response_data['NotebookAddScript'] += f"then\n"
-              response_data['NotebookAddScript'] += f"  wget https://raw.githubusercontent.com/aws-samples/amazon-neptune-graph-virtualization/main/notebook/climate-data-queries.ipynb /home/ec2-user/SageMaker/climate-data-queries.ipynb\n"
+              response_data['NotebookAddScript'] += f"  cd /home/ec2-user/SageMaker\n"
+              response_data['NotebookAddScript'] += f"  wget https://raw.githubusercontent.com/aws-samples/amazon-neptune-graph-virtualization/main/notebook/climate-data-queries.ipynb\n"
               response_data['NotebookAddScript'] += f"fi\n"
               response_data['Data'] = 'git success'
               cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
