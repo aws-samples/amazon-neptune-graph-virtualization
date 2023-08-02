@@ -118,6 +118,7 @@ Resources:
            PUB_BUCKET = '${SourceS3BucketName}'
            ROOT_DIR_NOSLASH= '${SourceS3BucketFolderNoSlash}'
            DATA_BUCKET='${S3DataBucket}'
+           STACKNAME='${StackName}'
 
            def handler(event, context):
               response_data = {}
@@ -125,6 +126,7 @@ Resources:
               response_data['NotebookAddScript'] =  f'echo "export PUB_BUCKET={PUB_BUCKET}" >> ~/.bashrc\n'
               response_data['NotebookAddScript'] +=  f'echo "export DATA_BUCKET={DATA_BUCKET}" >> ~/.bashrc\n'
               response_data['NotebookAddScript'] +=  f'echo "export ROOT_DIR_NOSLASH={ROOT_DIR_NOSLASH}" >> ~/.bashrc\n'
+              response_data['NotebookAddScript'] +=  f'echo "export STACKNAME={STACKNAME}" >> ~/.bashrc\n'
               response_data['NotebookAddScript'] +=  f"if [ ! -f /home/ec2-user/SageMaker/climate-data-queries.ipynb  ]\n"
               response_data['NotebookAddScript'] += f"then\n"
               response_data['NotebookAddScript'] += f"  cd /home/ec2-user/SageMaker\n"
@@ -142,6 +144,7 @@ Resources:
             SourceS3BucketName: !Ref SourceS3BucketName,
             SourceS3BucketFolderNoSlash: !Ref SourceS3BucketFolderNoSlash,
             S3DataBucket : !Ref S3DataBucket,
+            StackName: !Ref AWS::StackName,
             Role : !GetAtt LambdaExecutionRole.Arn
             } 
   
