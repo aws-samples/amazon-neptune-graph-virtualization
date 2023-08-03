@@ -13,9 +13,9 @@ rdfs:		http://www.w3.org/2000/01/rdf-schema#
 [MappingDeclaration] @collection [[
 mappingId	temp_readings
 target		clmr:{timestamp}{station} a clmo:TemperatureReading ; clmo:dateTime {date}^^xsd:dateTime ; clmo:fahrenheit {fahrenheit}^^xsd:float ; clmo:celsius {celsius}^^xsd:float ; clmo:station clmr:{station} . 
-source		select * from "AwsDataCatalog"."kgc-climate"."charivie_kgc"
+source		select * from "AwsDataCatalog"."ontop-demo-lake"."climate_readings"
 
 mappingId	MAPID-53bf51d359964dd1cl955d0942e909de01
 target		clmr:{station} a clmo:WeatherStation ; clmo:name {name}^^xsd:string . 
-source		select station, name from "AwsDataCatalog"."kgc-climate"."charivie_kgc"
+source		select station, name from  "AwsDataCatalog"."ontop-demo-lake"."climate_readings"
 ]]

@@ -1,11 +1,29 @@
 #!/bin/bash
 
-if [ "$#" -ne "1" ]; then
-    echo "USAGE build.sh STACKAME"
+# This script sets up for building and deploying the Ontop container.
+# In the post, we run this from a Sagemaker notebook with extra IAM policies with access to CFN, ECR, and ECS.
+# You can also run this from EC2, Cloud9, or your own desktop.
+
+# It assumes you have the git repo cloned. You must run this from the scripts directory
+
+# Will need the stackname you used. In the notebook instance, we have it. Otherwise, override the value with the name you used.
+STACKNAME=`source ~/.bashrc ; echo $STACKNAME`
+
+# Check we are running from the correct directory
+FILE=deploy.sh
+if [ -f "$FILE" ]; then
+    echo "You are running from the correct directory"
+else 
+    echo "You should run from scripts directory of git clone"
     exit 1
 fi
 
-STACKNAME=$1
+# Download the Athena driver
+THISDIR=`pwd`
+mkdir jdbc
+cd jdbc
+wget https://downloads.athena.us-east-1.amazonaws.com/drivers/JDBC/SimbaAthenaJDBC-2.1.0.1000/AthenaJDBC42-2.1.0.1000.jar
+cd $THISDIR
 
 # extract values needed for build
 aws cloudformation describe-stacks --stack-name  $STACKNAME --output text | awk '{print $2 " " $3}' > vars.txt
@@ -25,6 +43,5 @@ export LakeSecurityGroup=`cat vars.txt | grep LakeSecurityGroup | awk '{print $2
 export LakeTaskRole=`cat vars.txt | grep LakeTaskRole | awk '{print $2}'`
 export RDSEndpoint=`cat vars.txt | grep RDSEndpoint | awk '{print $2}'`
 
-mkdir -p lake/jdbc
-wget https://s3.amazonaws.com/athena-downloads/drivers/JDBC/SimbaAthenaJDBC-2.0.33.1002/AthenaJDBC42-2.0.33.jar
-mv AthenaJDBC42-2.0.33.jar lake/jdbc/AthenaJDBC42-2.0.33.jar
+echo Here are the vars
+cat vars.txt
