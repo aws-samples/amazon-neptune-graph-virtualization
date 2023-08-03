@@ -10,7 +10,15 @@ Some instructions to be fleshed out:
 	- Clone GIT repo
 	- chmod +x on the .sh files
 	- run build.sh passing STACKNAME as arg
-	- run deploy.sh passing STACKNAME and ECSSTACKNAME as args
+	- run deploy.sh passing STACKNAME and ECSSTACKNAME as args. Check the CFN console to see the stack runs successfully
+
+```
+git clone https://github.com/aws-samples/amazon-neptune-graph-virtualization.git
+cd amazon-neptune-graph-virtualization/scripts/
+chmod +x *.sh
+./build.sh sing1
+./deploy.sh sing1 ecs1
+```
 
 Current limitations:
 - Not all data is in source bucket

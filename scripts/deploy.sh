@@ -1,7 +1,7 @@
 #!/bin/bash
 # This script sets up for building the Ontop container.
-# In the post, we run this from a Sagemaker notebook with extra IAM policies with access to CFN, ECR, and ECS.
-# You can also run this from EC2, Cloud9, or your own desktop.
+# In the post, Cloud9 IDE.
+# You can also run this from EC2 or your own desktop.
 
 # It assumes you have the git repo cloned. You must run this from the scripts directory
 
@@ -41,7 +41,7 @@ echo LakeTaskRole $LakeTaskRole
 # Run CFN to create ECS task
 # Change path if necessary
 aws cloudformation create-stack --stack-name ${ECSSTACKNAME} \
-  --template-body file:///home/ec2-user/SageMaker/amazon-neptune-graph-virtualization/cfn/ecs_task.yaml \
+  --template-body file:///home/ec2-user/environment/amazon-neptune-graph-virtualization/cfn/ecs_task.yaml \
   --parameters \
   ParameterKey=VPC,ParameterValue=${VPC} \
   ParameterKey=Subnet,ParameterValue=${PrivateSubnet1} \
