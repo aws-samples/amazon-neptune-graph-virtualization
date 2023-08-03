@@ -29,6 +29,9 @@ REGION=`aws configure get region`
 ACCOUNT=`aws sts get-caller-identity --query "Account" --output text`
 aws cloudformation describe-stacks --stack-name  $STACKNAME --output text | awk '{print $2 " " $3}' > vars.txt
 S3DataBucket=`cat vars.txt | grep S3DataBucket | awk '{print $2}'`
+echo Region $REGION
+echo Account $ACCOUNT
+echo S3 $S3DataBucket
 
 # Modify ontop properties file to use region and bucket
 cp ontop/climate.properties ontop/climate.properties.orig
