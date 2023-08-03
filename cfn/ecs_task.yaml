@@ -1,10 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: CFN Template to deploy ontop container for lake
 
-# TODO - grab the mysql driver and config files
-# TODO - avoid using public subnets
-# TODO - no IAM user
-
 Parameters:
   VPC:
     Description: The VPC that the ECS cluster is deployed to

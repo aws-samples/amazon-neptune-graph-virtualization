@@ -2,7 +2,20 @@
 
 UNDER CONSTRUCTION. please check back later
 
-TODO: Fill this README out!
+Some instructions to be fleshed out:
+- Download copy of ontop_main.yaml
+- Run CloudFormation stack from ontop_main.yaml. Stack creates: Neptune cluster plus notebook, ECS Cluster, Glue DB and table, Cloud9 IDE, S3 bucket, and some roles
+- Open notebook and follow steps to copy S3, the bulk-load to Neptune
+- Open Cloud9 IDE and: do the following
+	- Clone GIT repo
+	- chmod +x on the .sh files
+	- run build.sh passing STACKNAME as arg
+	- run deploy.sh passing STACKNAME and ECSSTACKNAME as args
+
+Current limitations:
+- Not all data is in source bucket
+- Glue table not 100 percent correct
+
 
 Be sure to:
 

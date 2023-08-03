@@ -1,6 +1,6 @@
 FROM ontop/ontop
 WORKDIR /opt/ontop
-COPY input/climate.owl input/climate.obda input/climate.properties input/ 
+COPY ontop/climate.owl ontop/climate.obda ontop/climate.properties input/ 
 COPY jdbc/AthenaJDBC42-2.1.0.1000.jar jdbc/
 EXPOSE 8080
 ENTRYPOINT java -cp ./lib/*:./jdbc/* -Dlogback.configurationFile=file:./log/logback.xml \

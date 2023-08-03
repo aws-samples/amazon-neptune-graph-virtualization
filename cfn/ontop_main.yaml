@@ -76,8 +76,49 @@ Parameters:
     Description: "Where the data is."
     Default: neptune-virtualization/blog
     Type: String 
+  Cloud9InstanceType:
+    Description: EC2 instance type on which IDE runs
+    Type:        String
+    Default:     t2.micro
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t2.xlarge
+      - t2.2xlarge
+      - m3.medium
+      - m3.large
+      - m3.xlarge
+      - m3.2xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - m4.16xlarge
+      - c3.large
+      - c3.xlarge
+      - c3.2xlarge
+      - c3.4xlarge
+      - c3.8xlarge
+      - c4.large
+      - c4.xlarge
+      - c4.2xlarge
+      - c4.4xlarge
+      - c4.8xlarge
 
 Resources:
+  # We need an IDE for two purposes: build docker image for Ontop
+  Cloud9IDE:
+    Type: 'AWS::Cloud9::EnvironmentEC2'
+    Properties:
+      Name: OntopCloud9IDE
+      InstanceType: !Ref 'Cloud9InstanceType'
+      SubnetId: !GetAtt
+        - NeptuneStack
+        - Outputs.Subnet4
 
   # S3 bucket; mainly just for data
   S3DataBucket:
@@ -315,8 +356,9 @@ Resources:
           "averageRecordSize": "91",
           "compressionType": "none",
           "classification": "parquet",
-          "typeOfData": "file"
-        }
+          "typeOfData": "file",
+          "partition_filtering.enabled": "true",
+         }
         StorageDescriptor:
           Columns: 
             - Name: station
@@ -339,6 +381,7 @@ Resources:
               Type: bigint
             - Name: index
               Type: bigint
+          BucketColumns: []
           Location: !Sub "s3://${S3DataBucket}/lake/climate/"
           InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
           OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
@@ -355,7 +398,8 @@ Resources:
             "averageRecordSize": "91",
             "compressionType": "none",
             "classification": "parquet",
-            "typeOfData": "file"
+            "typeOfData": "file",
+            "partition_filtering.enabled": "true"
           }
           StoredAsSubDirectories: false
 
@@ -425,4 +469,6 @@ Outputs:
     Value: !Ref DemoVirtualizationDatabase
   ClimateReadingsTable:
     Value: !Ref ClimateReadingsTable
+  Cloud9IDE:
+    Value: !Ref Cloud9IDE
 
