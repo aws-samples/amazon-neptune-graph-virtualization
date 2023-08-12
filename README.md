@@ -13,7 +13,7 @@ Some instructions to be fleshed out:
 	- run deploy.sh passing STACKNAME and ECSSTACKNAME as args. Check the CFN console to see the stack runs successfully
 
 ```
-aws s3 cp --recursive  s3://$PUB_BUCKET/$ROOT_DIR_NOSLASH/lake s3://$DATA_BUCKET/lake/climate
+aws s3 cp --recursive  s3://aws-neptune-customer-samples/neptune-virtualization/blog/lake s3://$DATA_BUCKET/lake/climate
 Then run the crawler from console
 
 
