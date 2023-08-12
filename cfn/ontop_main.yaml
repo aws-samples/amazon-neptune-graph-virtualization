@@ -362,7 +362,7 @@ Resources:
                   - "s3:PutObject"
                 Resource: 
                   !Join
-                    - ''
+                    - '/'
                     - - !GetAtt S3DataBucket.Arn
                       - "*"
   ClimateCrawler:
@@ -373,10 +373,11 @@ Resources:
       DatabaseName: !Ref DemoVirtualizationDatabase
       Targets:
         S3Targets:
-          - Path: !Sub 's3://${S3DataBucket}/lake/climate/*'
+          - Path: !Sub 's3://${S3DataBucket}/lake/climate/'
       SchemaChangePolicy:
         UpdateBehavior: "UPDATE_IN_DATABASE"
         DeleteBehavior: "LOG"
+      Configuration: "{\"Version\":1.0,\"CreatePartitionIndex\":true}"
 
 Outputs:
 
