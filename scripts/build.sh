@@ -1,7 +1,7 @@
 #!/bin/bash
 # This script sets up for building the Ontop container.
-# In the post, we run this from a Sagemaker notebook with extra IAM policies with access to CFN, ECR, and ECS.
-# You can also run this from EC2, Cloud9, or your own desktop.
+# In the post, Cloud9 IDE.
+# You can also run this from EC2 or your own desktop.
 
 # It assumes you have the git repo cloned. You must run this from the scripts directory
 
@@ -20,7 +20,7 @@ else
 fi
 
 STACKNAME=$1
-echo STACKNAME
+echo $STACKNAME
 
 # Download the Athena driver
 THISDIR=`pwd`

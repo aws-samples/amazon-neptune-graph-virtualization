@@ -11,9 +11,11 @@ if [ "$#" -ne "1" ]; then
 fi
 
 STACKNAME=$1
-echo STACKNAME
+echo $STACKNAME
 
 aws cloudformation describe-stacks --stack-name  $STACKNAME --output text | awk '{print $2 " " $3}' > vars.txt
 S3DataBucket=`cat vars.txt | grep S3DataBucket | awk '{print $2}'`
+
+grep $S3DataBucket
 
 aws s3 sync s3://aws-neptune-customer-samples/neptune-virtualization/blog s3://$S3DataBucket
