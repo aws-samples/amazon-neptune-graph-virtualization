@@ -13,6 +13,10 @@ Some instructions to be fleshed out:
 	- run deploy.sh passing STACKNAME and ECSSTACKNAME as args. Check the CFN console to see the stack runs successfully
 
 ```
+aws s3 cp --recursive  s3://$PUB_BUCKET/$ROOT_DIR_NOSLASH/lake s3://$DATA_BUCKET/lake/climate
+Then run the crawler from console
+
+
 git clone https://github.com/aws-samples/amazon-neptune-graph-virtualization.git
 cd amazon-neptune-graph-virtualization/scripts/
 chmod +x *.sh

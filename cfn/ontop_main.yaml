@@ -333,75 +333,50 @@ Resources:
         Description: "Demo virtualization lake"
       CatalogId: !Ref AWS::AccountId
 
-  # The climate table. 
-  # The data itself will need to be moved to the reader's S3DataBucket.
-  # That copy is manual and done post-setup.
-  ClimateReadingsTable:
-    Type: "AWS::Glue::Table"
-    DependsOn: DemoVirtualizationDatabase
+  CrawlerRole:
+    Type: AWS::IAM::Role
     Properties:
-      DatabaseName: ontop_demo_lake
-      CatalogId: !Ref AWS::AccountId
-      TableInput:
-        Name: climate_readings
-        Description: "Demo virtualization table - climate readings"
-        TableType: "EXTERNAL_TABLE"
-        PartitionKeys: 
-          - Name: partition_0
-            Type: string
-        Parameters: {
-          "sizeKey": "13687923629",
-          "objectCount": "231407",
-          "recordCount": "615423281",
-          "averageRecordSize": "91",
-          "compressionType": "none",
-          "classification": "parquet",
-          "typeOfData": "file",
-          "partition_filtering.enabled": "true",
-         }
-        StorageDescriptor:
-          Columns: 
-            - Name: station
-              Type: bigint
-            - Name: date
-              Type: string
-            - Name: latitude
-              Type: double
-            - Name: longitude
-              Type: double
-            - Name: name
-              Type: string
-            - Name: tmp
-              Type: string
-            - Name: fahrenheit
-              Type: double
-            - Name: celsius
-              Type: double
-            - Name: timestamp
-              Type: bigint
-            - Name: index
-              Type: bigint
-          BucketColumns: []
-          Location: !Sub "s3://${S3DataBucket}/lake/climate/"
-          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
-          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
-          Compressed: false
-          NumberOfBuckets: -1
-          SerdeInfo: 
-            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
-            Parameters: 
-              serialization.format: 1
-          Parameters: {
-            "sizeKey": "13687923629",
-            "objectCount": "231407",
-            "recordCount": "615423281",
-            "averageRecordSize": "91",
-            "compressionType": "none",
-            "classification": "parquet",
-            "typeOfData": "file",
-            "partition_filtering.enabled": "true"
-          }
-          StoredAsSubDirectories: false
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "glue.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        ['arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole']
+      Policies:
+        -
+          PolicyName: "S3BucketAccessPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: 
+                  - "s3:GetObject"
+                  - "s3:PutObject"
+                Resource: 
+                  !Join
+                    - ''
+                    - - !GetAtt S3DataBucket.Arn
+                      - "*"
+  ClimateCrawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Name: "ClimateCrawler"
+      Role: !GetAtt CrawlerRole.Arn
+      DatabaseName: !Ref DemoVirtualizationDatabase
+      Targets:
+        S3Targets:
+          - Path: !Sub 's3://${S3DataBucket}/lake/climate/*'
+      SchemaChangePolicy:
+        UpdateBehavior: "UPDATE_IN_DATABASE"
+        DeleteBehavior: "LOG"
 
 Outputs:
 
@@ -467,8 +442,6 @@ Outputs:
     Value: !Ref ECSTaskRole
   DemoVirtualizationDatabase:
     Value: !Ref DemoVirtualizationDatabase
-  ClimateReadingsTable:
-    Value: !Ref ClimateReadingsTable
   Cloud9IDE:
     Value: !Ref Cloud9IDE
 
