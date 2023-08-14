@@ -20,4 +20,29 @@ S3DataBucket=`cat vars.txt | grep S3DataBucket | awk '{print $2}'`
 echo S3DataBucket
 echo $S3DataBucket
 
-aws s3 sync s3://aws-neptune-customer-samples/neptune-virtualization/blog s3://$S3DataBucket
+#
+# We're copying from public bucket in us-east-1.
+# VPC endpoint does not allow cp or sync cross-region
+# So we copy to holding area
+#
+
+rm -rf holding
+mkdir -p holding
+aws s3 cp --recursive s3://aws-neptune-customer-samples/neptune-virtualization/blog/rdf holding
+aws s3 cp --recursive holding s3://$S3DataBucket/rdf
+rm -rf holding
+
+#YEARS=( 1979 1980 1981 1982 1983 1984 1985 )
+YEARS=( 1983 1984 1985 )
+for y in "${YEARS[@]}"
+do
+    mkdir -p holding
+    aws s3 cp s3://aws-neptune-customer-samples/neptune-virtualization/blog/lake/$y.zip holding/$y.zip
+    cd holding
+    unzip $y.zip >/dev/null 2>/dev/null
+    rm $y.zip
+    cd ..
+    aws s3 cp --recursive holding/$y s3://$S3DataBucket/lake/climate/$y >/dev/null 2>/dev/null
+    rm -rf holding
+done
+
