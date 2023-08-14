@@ -29,16 +29,16 @@ chmod +x *.sh
 
 - Still in Athena console, preview the climate table.
 
-
+- Return to the terminal in the Cloud9 IDE. Build the
+```
 
 ./build.sh <yourstackname>
 ./deploy.sh <yourstackname> ecs1
 ```
 
-Current limitations:
-- Not all data is in source bucket
-- Glue table not 100 percent correct
+- In a separate tab in your browser, go to the ECS console. Find the running task for the ontop-lake table. Get its private IP address and copy it.
 
+- In a separate tab in your browser, go to the SageMaker console. Open Jupyter. In Jupyter, open climate-data-queryes.ipynb and follow the steps.
 
 Be sure to:
 
