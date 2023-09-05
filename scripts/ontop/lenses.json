@@ -1,0 +1,25 @@
+{
+    "relations": [
+        {
+            "name": ["\"lenses\"", "\"climate\""],
+            "baseRelation": ["\"AwsDataCatalog\"", "\"ontop_demo_lake\"", "\"climate\""],
+            "uniqueConstraints": {
+                "added": [
+                    {
+                        "name": "uc1",
+                        "determinants": ["\"timestamp\"", "\"station\""]
+                    }
+                ]
+            },
+            "otherFunctionalDependencies": {
+                "added": [
+                    {
+                        "determinants": ["\"station\""],
+                        "dependents": ["\"name\""]
+                    }
+                ]
+            },
+            "type": "BasicLens"
+        }
+    ]
+}
