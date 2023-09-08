@@ -5,7 +5,7 @@ The next figure shows our design.
 
 ![Design Flow](images/nep2lake_design_flow.png)
 
-First, we decide the split the data as follows. Weather station data goes into a Neptune database. Having it there allows us to maintain relationships between stations and their locations. In general we want to be able to navigate those relationships. 
+First, we decide to split the data as follows. Weather station data goes into a Neptune database. Having it there allows us to maintain relationships between stations and their locations. In general we want to be able to navigate those relationships. 
 
 Neptune supports two well known graph representations: labelled property graph and Resource Description Framework (RDF). In this example, we use RDF. The query language for RDF is called SPARQL.
 
