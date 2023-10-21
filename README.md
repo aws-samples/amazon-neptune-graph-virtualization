@@ -61,7 +61,7 @@ Keep the terminal open. Will come back to this.
 
 - In a separate tab in your browser, go to the ECS console. Find the running task for the ontop-lake table. Get its private IP address and copy it.
 
-- In a separate tab in your browser, go to the SageMaker console. Open Jupyter. In Jupyter, open climate-data-queryes.ipynb and follow the steps.
+- In a separate tab in your browser, go to the SageMaker console. Open Jupyter. In Jupyter, open climate-data-queryes.ipynb and replace any IP addresses referenced in the queries with the private IP address of the ECS task. Run the queries. 
 
 ## Security
 
