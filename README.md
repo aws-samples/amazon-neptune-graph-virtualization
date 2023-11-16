@@ -63,6 +63,12 @@ Keep the terminal open. Will come back to this.
 
 - In a separate tab in your browser, go to the SageMaker console. Open Jupyter. In Jupyter, open climate-data-queryes.ipynb and replace any IP addresses referenced in the queries with the private IP address of the ECS task. Run the queries. 
 
+## Cleanup
+To avoid costs, delete the resources as follows:
+
+- Remove the ECS service containing Ontop by deleting the CloudFormation stack that you created using the deploy.sh step during setup. That stack is based on template cfn/ecs-task.yaml.
+- Remove the main CloudFormation stack based on template cfn/ontop_main.yaml. This removes the Neptune cluster and notebook instance, as well as the Cloud9 instance and the ECS cluster.
+
 ## Security
 
 See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
