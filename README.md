@@ -67,7 +67,7 @@ Keep the terminal open. Will come back to this.
 To avoid costs, delete the resources as follows:
 
 - Remove the ECS service containing Ontop by deleting the CloudFormation stack that you created using the deploy.sh step during setup. That stack is based on template cfn/ecs-task.yaml.
-- Remove the main CloudFormation stack based on template cfn/ontop_main.yaml. This removes the Neptune cluster and notebook instance, as well as the Cloud9 instance and the ECS cluster.
+- Remove the main CloudFormation stack based on template cfn/ontop_main.yaml. This removes the Neptune cluster and notebook instance, the Glue catalog database, as well as the Cloud9 instance and the ECS cluster.
 
 ## Security
 
