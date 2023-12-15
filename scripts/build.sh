@@ -47,10 +47,10 @@ echo "ECR login"
 aws ecr get-login-password --region ${REGION} | docker login --username AWS --password-stdin ${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com
 
 echo "Docker build"
-docker build -t ontop-lake .
+docker build -t ontop-graph-weather-lake .
 
 echo "Docker tag"
-docker tag ontop-lake:latest ${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/ontop-lake:latest 
+docker tag ontop-graph-weather-lake:latest ${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/ontop-graph-weather-lake:latest
 
 echo "Docker push"
-docker push ${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/ontop-lake:latest
+docker push ${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/ontop-graph-weather-lake:latest

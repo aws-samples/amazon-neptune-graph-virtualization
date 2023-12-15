@@ -46,7 +46,7 @@ aws cloudformation create-stack --stack-name ${ECSSTACKNAME} \
   ParameterKey=VPC,ParameterValue=${VPC} \
   ParameterKey=Subnet,ParameterValue=${PrivateSubnet1} \
   ParameterKey=ECSCluster,ParameterValue=${ECSCluster} \
-  ParameterKey=TaskDefName,ParameterValue=ontop-lake \
+  ParameterKey=TaskDefName,ParameterValue=ontop-graph-weather-lake \
   ParameterKey=SecurityGroup,ParameterValue=${LakeSecurityGroup} \
   ParameterKey=TaskRole,ParameterValue=${LakeTaskRole} \
    --capabilities CAPABILITY_NAMED_IAM

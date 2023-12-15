@@ -10,20 +10,20 @@ Parameters:
   NeptuneDbInstanceType:
     Description: Neptune DB instance type
     Type: String
-    Default: db.r5.xlarge
+    Default: db.serverless
     AllowedValues:
+      - db.serverless
       - db.t3.medium
-      - db.r4.large
-      - db.r4.xlarge
-      - db.r4.2xlarge
-      - db.r4.4xlarge
-      - db.r4.8xlarge
       - db.r5.large
       - db.r5.xlarge
       - db.r5.2xlarge
       - db.r5.4xlarge
       - db.r5.8xlarge
-      - db.r5.12xlarge
+      - db.r6g.large
+      - db.r6g.xlarge
+      - db.r6g.2xlarge
+      - db.r6g.4xlarge
+      - db.r6g.8xlarge
   IamAuthEnabled:
     Type: String
     Default: "true"
@@ -45,35 +45,47 @@ Parameters:
       - ml.t2.xlarge
       - ml.t2.2xlarge
       - ml.t3.medium
+      - ml.t3.large
+      - ml.t3.xlarge
+      - ml.t3.2xlarge
       - ml.m4.xlarge
       - ml.m4.2xlarge
       - ml.m4.4xlarge
       - ml.m4.10xlarge
       - ml.m4.16xlarge
-      - ml.m5.large
       - ml.m5.xlarge
       - ml.m5.2xlarge
       - ml.m5.4xlarge
       - ml.m5.12xlarge
       - ml.m5.24xlarge
-      - ml.m5d.large
-      - ml.m5d.xlarge
-      - ml.m5d.2xlarge
-      - ml.m5d.4xlarge
-      - ml.m5d.12xlarge
-      - ml.m5d.24xlarge
       - ml.c4.large
       - ml.c4.xlarge
       - ml.c4.2xlarge
       - ml.c4.4xlarge
       - ml.c4.8xlarge
+      - ml.c5.xlarge
+      - ml.c5.2xlarge
+      - ml.c5.4xlarge
+      - ml.c5.9xlarge
+      - ml.c5.18xlarge
+      - ml.c5d.xlarge
+      - ml.c5d.2xlarge
+      - ml.c5d.4xlarge
+      - ml.c5d.9xlarge
+      - ml.c5d.18xlarge
+      - ml.p3.2xlarge
+      - ml.p3.8xlarge
+      - ml.p3.16xlarge
+      - ml.p2.2xlarge
+      - ml.p2.8xlarge
+      - ml.p2.16xlarge
     ConstraintDescription: Must be a valid SageMaker instance type.
   SourceS3BucketName:
-    Description: "Where the data is."
+    Description: "Public bucket containing weather data for this demo"
     Default: aws-neptune-customer-samples
     Type: String 
   SourceS3BucketFolderNoSlash:
-    Description: "Where the data is."
+    Description: "Folder in public bucket containing weather data for this demo"
     Default: neptune-virtualization/blog
     Type: String 
   Cloud9InstanceType:
@@ -116,11 +128,12 @@ Resources:
     Properties:
       Name: OntopCloud9IDE
       InstanceType: !Ref 'Cloud9InstanceType'
+      ImageId: amazonlinux-2023-x86_64
       SubnetId: !GetAtt
-        - NeptuneStack
-        - Outputs.Subnet4
+        - NeptuneCoreStack
+        - Outputs.PublicSubnet1
 
-  # S3 bucket; mainly just for data
+  # S3 bucket for weather data, used by lake and for Neptune bulk-load staging
   S3DataBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Delete 
@@ -138,8 +151,8 @@ Resources:
     Properties:
       Role: !GetAtt 'LambdaExecutionRole.Arn'
       FunctionName: !Join ['-', [!Ref 'AWS::StackName','copy' ]]
-      MemorySize: 2048
-      Runtime: python3.7
+      MemorySize: 1024
+      Runtime: python3.10
       Timeout: 300
       Handler: index.handler
       Code:
@@ -219,10 +232,11 @@ Resources:
       pub_bucket_path: !Ref SourceS3BucketFolderNoSlash
 
   # Neptune base stack. Also creates VPC, S3 VPC endpoint, bulk load role
-  NeptuneStack:
+  NeptuneCoreStack:
+    # Encryption at not, not currently supported by quickstart
     Type: "AWS::CloudFormation::Stack"
     Properties:
-      TemplateURL: "https://aws-neptune-customer-samples.s3.amazonaws.com/v2/cloudformation-templates/neptune-full-stack-nested-template.json"
+      TemplateURL: "https://s3.amazonaws.com/aws-neptune-customer-samples/v2/cloudformation-templates/neptune-base-stack.json"
       TimeoutInMinutes: "60"
       Parameters:
         DBClusterId: !Join [ "-", ["gv", !Join [ "", !Split [ "-", !Select [ 2,  !Split [ "/", !Ref AWS::StackId ] ] ] ] ] ]
@@ -230,9 +244,26 @@ Resources:
         Env: !Ref Env
         IamAuthEnabled: !Ref IamAuthEnabled
         NeptuneEnableAuditLog: 1
+        StorageEncrypted: true
+
+  NeptuneNotebookStack:
+    # Encryption at not, not currently supported by quickstart
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL: "https://s3.amazonaws.com/aws-neptune-customer-samples/v2/cloudformation-templates/neptune-sagemaker-notebook-stack.json"
+      TimeoutInMinutes: "60"
+      Parameters:
+        Env: !Ref Env
         NotebookInstanceType: !Ref NotebookInstanceType
-        NeptuneSagemakerNotebookStartupScript:  !GetAtt EnvSetup.NotebookAddScript 
-        EC2ClientInstanceType: none
+        NeptuneClusterVpc: !GetAtt NeptuneCoreStack.Outputs.VPC
+        NeptuneClusterSubnetId: !GetAtt NeptuneCoreStack.Outputs.PublicSubnet1
+        NeptuneClientSecurityGroup: !GetAtt NeptuneCoreStack.Outputs.NeptuneSG
+        NeptuneLoadFromS3RoleArn: !GetAtt NeptuneCoreStack.Outputs.NeptuneLoadFromS3IAMRoleArn
+        DBClusterId: !GetAtt NeptuneCoreStack.Outputs.DBClusterId
+        NeptuneClusterResourceId: !GetAtt NeptuneCoreStack.Outputs.DBClusterResourceId
+        NeptuneClusterEndpoint: !GetAtt NeptuneCoreStack.Outputs.DBClusterEndpoint
+        EnableIamAuthOnNeptune: !Ref IamAuthEnabled
+        StartupScript: !GetAtt EnvSetup.NotebookAddScript 
 
   # Define as ECS console does except add 8080
   ECSSecurityGroup:
@@ -240,20 +271,18 @@ Resources:
     Properties:
       GroupDescription: "Lake traffic"
       VpcId: !GetAtt 
-        - NeptuneStack
+        - NeptuneCoreStack
         - Outputs.VPC
       SecurityGroupEgress:
-      - IpProtocol: "-1"
+      - IpProtocol: -1
         CidrIp: "0.0.0.0/0"
       SecurityGroupIngress:
       - IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
-        CidrIp: 0.0.0.0/0
-      - IpProtocol: tcp
         FromPort: 8080
         ToPort: 8080
-        CidrIp: 0.0.0.0/0
+        SourceSecurityGroupId: !GetAtt 
+        - NeptuneCoreStack
+        - Outputs.NeptuneSG
 
   # We need an ECS cluster. We will create a task too, but that's post-setup
   # The reader will do that on their own from the notebook
@@ -266,7 +295,7 @@ Resources:
   ECRLakeRepository: 
     Type: AWS::ECR::Repository
     Properties: 
-      RepositoryName: "ontop-lake"
+      RepositoryName: "ontop-graph-weather-lake"
 
   # The role for the ECS task, once it's ready
   ECSTaskRole:
@@ -315,13 +344,21 @@ Resources:
                   - s3:GetObject
                   - s3:ListBucket
                   - s3:ListBucketMultipartUploads
-                  - s3:AbortMultipartUpload
-                  - s3:PutObject
                   - s3:ListMultipartUploadParts
                 Resource:
                   - !Sub 'arn:aws:s3:::${S3DataBucket}'
                   - !Sub 'arn:aws:s3:::${S3DataBucket}/*'
-                  - !Sub 'arn:aws:s3:::${S3DataBucket}/athena_output/*'
+              - Effect: Allow
+                Action:
+                  - s3:GetBucketLocation
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:ListBucketMultipartUploads
+                  - s3:AbortMultipartUpload
+                  - s3:PutObject
+                  - s3:ListMultipartUploadParts
+                Resource:
+                  - !Sub 'arn:aws:s3:::${S3DataBucket}/results/*'
 
   # Glue catalog DB
   DemoVirtualizationDatabase:
@@ -384,52 +421,44 @@ Outputs:
 
   DBClusterEndpoint:
     Value: !GetAtt
-      - NeptuneStack
+      - NeptuneCoreStack
       - Outputs.DBClusterEndpoint
   DBClusterId:
     Value: !GetAtt
-      - NeptuneStack
+      - NeptuneCoreStack
       - Outputs.DBClusterId
   DBClusterPort:
     Value: !GetAtt
-      - NeptuneStack
+      - NeptuneCoreStack
       - Outputs.DBClusterPort
   DBClusterResourceId:
     Value: !GetAtt
-      - NeptuneStack
+      - NeptuneCoreStack
       - Outputs.DBClusterResourceId
   NeptuneLoadFromS3IAMRoleArn:
     Value: !GetAtt
-      - NeptuneStack
+      - NeptuneCoreStack
       - Outputs.NeptuneLoadFromS3IAMRoleArn
-  NeptuneSagemakerNotebook:
-    Value: !GetAtt
-      - NeptuneStack
-      - Outputs.NeptuneSagemakerNotebook
   PrivateSubnet1:
     Value: !GetAtt
-      - NeptuneStack
-      - Outputs.Subnet1
+      - NeptuneCoreStack
+      - Outputs.PrivateSubnet1
   PrivateSubnet2:
     Value: !GetAtt
-      - NeptuneStack
-      - Outputs.Subnet2
-  PrivateSubnet3:
-    Value: !GetAtt
-      - NeptuneStack
-      - Outputs.Subnet3
+      - NeptuneCoreStack
+      - Outputs.PrivateSubnet2
   PublicSubnet1:
     Value: !GetAtt
-      - NeptuneStack
-      - Outputs.Subnet4
+      - NeptuneCoreStack
+      - Outputs.PublicSubnet1
   VPC:
     Value: !GetAtt
-      - NeptuneStack
+      - NeptuneCoreStack
       - Outputs.VPC
 
   NeptuneSagemakerNotebook:
     Value: !GetAtt
-      - NeptuneStack
+      - NeptuneNotebookStack
       - Outputs.NeptuneSagemakerNotebook
   S3DataBucket:
     Value: !Ref S3DataBucket
