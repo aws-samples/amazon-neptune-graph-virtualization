@@ -38,10 +38,12 @@ echo ECSCluster $ECSCluster
 echo LakeSecurityGroup $LakeSecurityGroup
 echo LakeTaskRole $LakeTaskRole
 
+BUILDDIR=`echo $(cd ../ && pwd)`
+
 # Run CFN to create ECS task
 # Change path if necessary
 aws cloudformation create-stack --stack-name ${ECSSTACKNAME} \
-  --template-body file:///home/ec2-user/environment/amazon-neptune-graph-virtualization/cfn/ecs_task.yaml \
+  --template-body file://$BUILDDIR/cfn/ecs_task.yaml \
   --parameters \
   ParameterKey=VPC,ParameterValue=${VPC} \
   ParameterKey=Subnet,ParameterValue=${PrivateSubnet1} \
