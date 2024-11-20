@@ -25,20 +25,25 @@ Here is the flow:
 We are presenting this demo in several public presentations and are writing a post for the AWS Database blog on this topic. We recommend these to better understand the motivation for virtualization and our design.
 
 ## Setup Instructions
-- Download cfn/ontop_main.yaml
+- Download [cfn/ontop_main.yaml](cfn/ontop_main.yaml).
 - Go to the CloudFormation console in your AWS account. Create a CloudFormation stack from your local copy of ontop_main.yaml. The stack creates a Neptune cluster, a SageMaker notebook instance, an ECS Cluster, a Glue database and crawler, an S3 bucket, and some IAM roles. The notebook instance serves two purposes:
    * It enables you to bulk-load data to Neptune and run SPARQL queries against Neptune and the ontop endpoint.
    * It acts as a build machine to build the container. This is optional; use it if you do not wish to use your own build machine.
 - (Optional) If using the SageMaker instance as a build machine, add permissions needed to build.
-   * In the SageMaker console, locate the notebook instance created. Select it.
+   * In the SageMaker console, locate the notebook instance created from the list of notebooks. Select it to show details of the instance.
+![Notebook find](images/notebook_find.png)
    * In the SageMaker console, locate the IAM role for the instance under ```Permissions and encryption```. Select it to open it in the IAM console.
-   * In the IAM console, add permissions:
+![Notebook role](images/notebook_role.png)
+   * In the IAM console, add permissions similar to the following:
       * ```AmazonECS_FullAccess``` managed policy or some subset of it to enable creation of ECS resources.
       * ```AWSCloudFormationFullAccess``` managed policy or some subset of it to enable viewing your existing stack and creating a new stack.
       * ```CloudWatchLogsFullAccess``` managed policy or some subset of it to enable ECS stack to setup log group.
       * ```EC2InstanceProfileForImageBuilderECRContainerBuilds``` managed policy or some subset of it to enable creation of ECR image.
       * ```IAMFullAccess``` managed policy or some subset of it to enable ECS stack to create IAM role. 
+![Notebook addperms](images/notebook_addperms.png)
 - (Optional) If using notebook instance as a build machine, open Jupyter or Jupyter Labs in the notebook instance. Once in, open a terminal.
+![Notebook jupyter](images/notebook_jupyter.png)
+![Notebook terminal](images/notebook_terminal.png)
 - From a terminal on the build machine, run the following:
 
 ```
