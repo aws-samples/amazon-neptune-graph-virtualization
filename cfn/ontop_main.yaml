@@ -88,50 +88,8 @@ Parameters:
     Description: "Folder in public bucket containing weather data for this demo"
     Default: neptune-virtualization/blog
     Type: String 
-  Cloud9InstanceType:
-    Description: EC2 instance type on which IDE runs
-    Type:        String
-    Default:     t2.micro
-    AllowedValues:
-      - t2.nano
-      - t2.micro
-      - t2.small
-      - t2.medium
-      - t2.large
-      - t2.xlarge
-      - t2.2xlarge
-      - m3.medium
-      - m3.large
-      - m3.xlarge
-      - m3.2xlarge
-      - m4.large
-      - m4.xlarge
-      - m4.2xlarge
-      - m4.4xlarge
-      - m4.10xlarge
-      - m4.16xlarge
-      - c3.large
-      - c3.xlarge
-      - c3.2xlarge
-      - c3.4xlarge
-      - c3.8xlarge
-      - c4.large
-      - c4.xlarge
-      - c4.2xlarge
-      - c4.4xlarge
-      - c4.8xlarge
 
 Resources:
-  # We need an IDE for two purposes: build docker image for Ontop
-  Cloud9IDE:
-    Type: 'AWS::Cloud9::EnvironmentEC2'
-    Properties:
-      Name: OntopCloud9IDE
-      InstanceType: !Ref 'Cloud9InstanceType'
-      ImageId: amazonlinux-2023-x86_64
-      SubnetId: !GetAtt
-        - NeptuneCoreStack
-        - Outputs.PublicSubnet1
 
   # S3 bucket for weather data, used by lake and for Neptune bulk-load staging
   S3DataBucket:
@@ -472,6 +430,4 @@ Outputs:
     Value: !Ref ECSTaskRole
   DemoVirtualizationDatabase:
     Value: !Ref DemoVirtualizationDatabase
-  Cloud9IDE:
-    Value: !Ref Cloud9IDE
 
