@@ -25,10 +25,26 @@ Here is the flow:
 We are presenting this demo in several public presentations and are writing a post for the AWS Database blog on this topic. We recommend these to better understand the motivation for virtualization and our design.
 
 ## Setup Instructions
-- Download cfn/ontop_main.yaml
-- Go to the CloudFormation console in your AWS account. Create a CloudFormation stack from your local copy of ontop_main.yaml. The stack creates a Neptune cluster, a Neptune notebook, an ECS Cluster, a Glue database and crawler, a Cloud9 IDE, an S3 bucket, and some IAM roles.
-- From the Cloud9 console, open the Cloud9 IDE.
-- Within the IDE, open a terminal and run the following:
+- Download [cfn/ontop_main.yaml](cfn/ontop_main.yaml).
+- Go to the CloudFormation console in your AWS account. Create a CloudFormation stack from your local copy of ontop_main.yaml. The stack creates a Neptune cluster, a SageMaker notebook instance, an ECS Cluster, a Glue database and crawler, an S3 bucket, and some IAM roles. The notebook instance serves two purposes:
+   * It enables you to bulk-load data to Neptune and run SPARQL queries against Neptune and the ontop endpoint.
+   * It acts as a build machine to build the container. This is optional; use it if you do not wish to use your own build machine.
+- (Optional) If using the SageMaker instance as a build machine, add permissions needed to build.
+   * In the SageMaker console, locate the notebook instance created from the list of notebooks. Select it to show details of the instance.
+![Notebook find](images/notebook_find.png)
+   * In the SageMaker console, locate the IAM role for the instance under ```Permissions and encryption```. Select it to open it in the IAM console.
+![Notebook role](images/notebook_role.png)
+   * In the IAM console, add permissions similar to the following:
+      * ```AmazonECS_FullAccess``` managed policy or some subset of it to enable creation of ECS resources.
+      * ```AWSCloudFormationFullAccess``` managed policy or some subset of it to enable viewing your existing stack and creating a new stack.
+      * ```CloudWatchLogsFullAccess``` managed policy or some subset of it to enable ECS stack to setup log group.
+      * ```EC2InstanceProfileForImageBuilderECRContainerBuilds``` managed policy or some subset of it to enable creation of ECR image.
+      * ```IAMFullAccess``` managed policy or some subset of it to enable ECS stack to create IAM role. 
+![Notebook addperms](images/notebook_addperms.png)
+- (Optional) If using notebook instance as a build machine, open Jupyter or Jupyter Labs in the notebook instance. Once in, open a terminal.
+![Notebook jupyter](images/notebook_jupyter.png)
+![Notebook terminal](images/notebook_terminal.png)
+- From a terminal on the build machine, run the following:
 
 ```
 # get the code
@@ -52,7 +68,7 @@ Keep the terminal open. Will come back to this.
 
 - Still in Athena console, go to the query editor, select the climate table, and run a preview query. Confirm that valid temperature readings comes back in the result set.
 
-- In the Cloud9 IDE, return to the terminal. Run the following:
+- Return to the teriminal on the build machine. Run the following:
 ```
 
 ./build.sh <yourstackname>
@@ -61,13 +77,13 @@ Keep the terminal open. Will come back to this.
 
 - In a separate tab in your browser, go to the ECS console. Find the running task for the ontop-lake table. Get its private IP address and copy it.
 
-- In a separate tab in your browser, go to the SageMaker console. Open Jupyter. In Jupyter, open climate-data-queryes.ipynb and replace any IP addresses referenced in the queries with the private IP address of the ECS task. Run the queries. 
+- If Jupyter is not already open, from the SageMaker console, open Jupyter or Jupyter Lab. In Jupyter, open climate-data-queryes.ipynb and replace any IP addresses referenced in the queries with the private IP address of the ECS task. Run the queries. 
 
 ## Cleanup
 To avoid costs, delete the resources as follows:
 
 - Remove the ECS service containing Ontop by deleting the CloudFormation stack that you created using the deploy.sh step during setup. That stack is based on template cfn/ecs-task.yaml.
-- Remove the main CloudFormation stack based on template cfn/ontop_main.yaml. This removes the Neptune cluster and notebook instance, the Glue catalog database, as well as the Cloud9 instance and the ECS cluster.
+- Remove the main CloudFormation stack based on template cfn/ontop_main.yaml. This removes the Neptune cluster and notebook instance, the Glue catalog database, as well the ECS cluster.
 
 ## Security
 
